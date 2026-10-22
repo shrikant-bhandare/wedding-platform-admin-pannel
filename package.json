@@ -1,6 +1,6 @@
 {
-  "name": "wedven-admin-panel",
-  "description": "Wedven Admin Panel - Manage venues, bookings, users and analytics",
+  "name": "sohalaa-admin-panel",
+  "description": "Sohalaa Admin Panel - Manage venues, bookings, users and analytics",
   "private": true,
   "version": "1.0.0",
   "type": "module",

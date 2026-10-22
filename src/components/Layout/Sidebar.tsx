@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
             <MapPin className="w-8 h-8 text-green-500" />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
           </div>
-          {isOpen && <span className="text-xl font-bold">WEDVEN</span>}
+          {isOpen && <span className="text-xl font-bold">SOHALAA</span>}
         </div>
         <button 
           onClick={onToggle}

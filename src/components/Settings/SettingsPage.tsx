@@ -40,8 +40,8 @@ interface PlatformSettings {
 }
 
 const defaultSettings: PlatformSettings = {
-  platformName: 'Wedven',
-  supportEmail: 'support@wedven.com',
+  platformName: 'Sohalaa',
+  supportEmail: 'support@sohalaa.com',
   platformFee: 5,
   currency: 'INR',
   emiMinAmount: 50000,
@@ -65,8 +65,8 @@ const defaultSettings: PlatformSettings = {
   codEnabled: false,
   minAdvancePayment: 25,
   chatAiEnabled: false,
-  chatAiGreeting: 'Hello! Welcome to Wedven. How can I help you with your wedding venue planning today?',
-  chatAiContext: 'You are a helpful wedding venue booking assistant for Wedven platform. Help users with venue information, booking queries, pricing, and wedding planning tips. Be friendly and professional.',
+  chatAiGreeting: 'Hello! Welcome to Sohalaa. How can I help you with your wedding venue planning today?',
+  chatAiContext: 'You are a helpful wedding venue booking assistant for Sohalaa platform. Help users with venue information, booking queries, pricing, and wedding planning tips. Be friendly and professional.',
 };
 
 const SettingsPage: React.FC<{ onEmiToggle?: (enabled: boolean) => void }> = ({ onEmiToggle }) => {
@@ -539,7 +539,7 @@ const SettingsPage: React.FC<{ onEmiToggle?: (enabled: boolean) => void }> = ({ 
                       rows={3}
                       maxLength={500}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                      placeholder="Hello! Welcome to Wedven..."
+                      placeholder="Hello! Welcome to Sohalaa..."
                     />
                     <p className="text-xs text-gray-400 mt-1">{settings.chatAiGreeting.length}/500</p>
                   </div>

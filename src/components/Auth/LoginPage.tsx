@@ -62,7 +62,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full"></div>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">WEDVEN</h1>
+          <h1 className="text-2xl font-bold text-gray-800">SOHALAA</h1>
           <div className="mt-2">
             <span className="bg-gray-900 text-white text-xs font-medium px-3 py-1 rounded">ADMIN PANEL</span>
           </div>
@@ -83,7 +83,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 if (errors.email) setErrors(prev => { const { email, ...rest } = prev; return rest; });
               }}
               required
-              placeholder="admin@wedven.com"
+              placeholder="you@example.com"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
@@ -133,7 +133,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         </form>
 
         <p className="text-xs text-gray-500 text-center mt-6">
-          © 2025 Wedven. All rights reserved.
+          © 2025 Sohalaa. All rights reserved.
         </p>
       </div>
     </div>

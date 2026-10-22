@@ -133,7 +133,7 @@ const ReportsPage: React.FC = () => {
 
   const handleExport = () => {
     const lines = [
-      'WEDVEN Analytics Report',
+      'SOHALAA Analytics Report',
       `Generated: ${new Date().toLocaleDateString()}`,
       '',
       'KEY METRICS',
@@ -162,7 +162,7 @@ const ReportsPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wedven-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `sohalaa-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
