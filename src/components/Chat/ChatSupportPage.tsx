@@ -404,6 +404,7 @@ const ChatSupportPage: React.FC = () => {
             <button
               onClick={sendReply}
               disabled={!reply.trim() || sending}
+              aria-label="Send reply"
               className="bg-green-600 text-white p-3 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
