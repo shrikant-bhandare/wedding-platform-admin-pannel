@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
         </div>
         <button 
           onClick={onToggle}
+          aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           className="p-1 hover:bg-gray-700 rounded-lg transition-colors"
         >
           {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -84,6 +85,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
+              aria-label={item.label}
+              title={isOpen ? undefined : item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`w-full flex items-center px-4 py-3 text-left transition-colors ${
                 isActive 
                   ? 'bg-green-600 text-white' 

@@ -13,6 +13,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Account already registered by an earlier attempt whose vendor-profile step failed
+  const [pendingUser, setPendingUser] = useState<{ id: string; email: string } | null>(null);
   const [formData, setFormData] = useState({
     // User details
     firstName: '',
@@ -65,8 +67,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be exactly 10 digits';
+    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      newErrors.phone = 'Phone must be 10 digits starting with 6-9';
     }
 
     if (!formData.password) {
@@ -79,6 +81,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
       newErrors.password = 'Password must contain at least one lowercase letter';
     } else if (!/\d/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one number';
+    } else if (!/[@$!%*?&]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one special character (@$!%*?&)';
+    } else if (!/^[A-Za-z\d@$!%*?&]+$/.test(formData.password)) {
+      newErrors.password = 'Password may only contain letters, numbers and @$!%*?&';
     }
 
     if (!formData.confirmPassword) {
@@ -156,42 +162,53 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
 
     setLoading(true);
 
+    const email = formData.email.trim().toLowerCase();
+    // Reuse the account from an earlier attempt whose vendor-profile step failed
+    let userId = pendingUser?.email === email ? pendingUser.id : '';
     try {
-      // First create user with VENDOR role
-      const userResponse = await adminApi.createUser({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        role: 'VENDOR',
-      });
+      // First create the account (the backend promotes it to VENDOR once the profile is saved)
+      if (!userId) {
+        const userResponse = await adminApi.createUser({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          role: 'USER',
+        });
+        // /auth/register returns { user: { id, ... } }
+        userId = userResponse.data?.user?.id || '';
+        if (!userId) {
+          throw new Error('User was created but no user id was returned');
+        }
+        setPendingUser({ id: userId, email });
+      }
 
       // Then create vendor profile
-      const userId = userResponse.data?.user?._id || userResponse.data?._id;
-      if (userId) {
-        await adminApi.createVendorForUser(userId, {
-          businessName: formData.businessName,
-          businessType: formData.businessType,
-          description: formData.description,
-          gstNumber: formData.gstNumber,
-          panNumber: formData.panNumber,
-          bankAccounts: formData.bankName ? [{
-            bankName: formData.bankName,
-            accountNumber: formData.accountNumber,
-            ifscCode: formData.ifscCode,
-            accountName: formData.accountHolderName,
-            isDefault: true,
-            isVerified: false,
-          }] : [],
-        });
-      }
+      await adminApi.createVendorForUser(userId, {
+        businessName: formData.businessName,
+        businessType: formData.businessType,
+        description: formData.description,
+        gstNumber: formData.gstNumber,
+        panNumber: formData.panNumber,
+        bankAccounts: formData.bankName ? [{
+          bankName: formData.bankName,
+          accountNumber: formData.accountNumber,
+          ifscCode: formData.ifscCode,
+          accountName: formData.accountHolderName,
+          isDefault: true,
+          isVerified: false,
+        }] : [],
+      });
 
       onSuccess();
       onClose();
       resetForm();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to create vendor');
+      const message = err.response?.data?.message || err.message || 'Failed to create vendor';
+      setError(userId
+        ? `User account created, but the vendor profile failed: ${message}. Fix the details and submit again.`
+        : message);
     } finally {
       setLoading(false);
     }
@@ -217,6 +234,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
     });
     setError('');
     setErrors({});
+    setPendingUser(null);
   };
 
   useEffect(() => {
@@ -336,7 +354,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Type *</label>
-              <select
+              <select aria-label="Business type"
                 name="businessType"
                 value={formData.businessType}
                 onChange={handleChange}

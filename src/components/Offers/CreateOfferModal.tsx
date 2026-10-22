@@ -180,7 +180,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = ({ isOpen, onClose, on
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
+                <select aria-label="Type"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -193,7 +193,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = ({ isOpen, onClose, on
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
+                <select aria-label="Status"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -272,7 +272,7 @@ const CreateOfferModal: React.FC<CreateOfferModalProps> = ({ isOpen, onClose, on
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Card Icon</label>
-                <select
+                <select aria-label="Icon"
                   value={formData.icon}
                   onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"

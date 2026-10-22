@@ -33,6 +33,10 @@ const BlogPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [totalViews, setTotalViews] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
   // Modal states
@@ -52,8 +56,13 @@ const BlogPage: React.FC = () => {
       if (categoryFilter) params.category = categoryFilter;
       if (searchQuery) params.search = searchQuery;
       const response = await adminApi.getBlogs(params);
-      const blogsData = response.data?.posts || response.data?.data || response.data || [];
+      // GET /admin/blog -> { data, pagination, statusCounts, totalViews }; no status = all posts incl. drafts
+      const blogsData = response.data?.data || [];
       setBlogs(Array.isArray(blogsData) ? blogsData : []);
+      setTotalMatching(response.data?.pagination?.total || 0);
+      setTotalPages(response.data?.pagination?.totalPages || 1);
+      setStatusCounts(response.data?.statusCounts || {});
+      setTotalViews(response.data?.totalViews || 0);
     } catch (err: any) {
       console.error('Error loading blogs:', err);
       setError(err.response?.data?.message || err.message || 'Failed to load blog posts');
@@ -67,8 +76,8 @@ const BlogPage: React.FC = () => {
   }, [page, statusFilter, categoryFilter]);
 
   const handleSearch = () => {
-    setPage(1);
-    loadBlogs();
+    if (page === 1) loadBlogs();
+    else setPage(1);
   };
 
   const handleView = (blog: BlogPost) => {
@@ -115,26 +124,14 @@ const BlogPage: React.FC = () => {
     }
   };
 
-  // Stats
-  const totalPosts = blogs.length;
-  const publishedPosts = blogs.filter(b => b.status === 'PUBLISHED').length;
-  const draftPosts = blogs.filter(b => b.status === 'DRAFT').length;
-  const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
+  // Stats: totals across all posts, from the server
+  const publishedPosts = statusCounts.PUBLISHED || 0;
+  const draftPosts = statusCounts.DRAFT || 0;
+  const totalPosts = Object.values(statusCounts).reduce((sum, n) => sum + n, 0);
 
-  // Filter
-  const filteredBlogs = blogs.filter(blog => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return blog.title.toLowerCase().includes(q) ||
-        blog.category?.toLowerCase().includes(q) ||
-        blog.excerpt?.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
-  // Paginate
-  const totalPages = Math.ceil(filteredBlogs.length / ITEMS_PER_PAGE);
-  const paginatedBlogs = filteredBlogs.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // Search, filters and pagination are applied on the server
+  const filteredBlogs = blogs;
+  const paginatedBlogs = blogs;
 
   return (
     <div className="space-y-6">
@@ -228,7 +225,7 @@ const BlogPage: React.FC = () => {
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
             />
           </div>
-          <select
+          <select aria-label="Status filter"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -237,7 +234,7 @@ const BlogPage: React.FC = () => {
             <option value="PUBLISHED">Published</option>
             <option value="DRAFT">Draft</option>
           </select>
-          <select
+          <select aria-label="Category filter"
             value={categoryFilter}
             onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
             className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -338,7 +335,7 @@ const BlogPage: React.FC = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
               <p className="text-sm text-gray-500">
-                Showing {(page - 1) * ITEMS_PER_PAGE + 1} to {Math.min(page * ITEMS_PER_PAGE, filteredBlogs.length)} of {filteredBlogs.length}
+                Showing {(page - 1) * ITEMS_PER_PAGE + 1} to {Math.min(page * ITEMS_PER_PAGE, totalMatching)} of {totalMatching}
               </p>
               <div className="flex gap-2">
                 <button
@@ -350,7 +347,7 @@ const BlogPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  disabled={page >= totalPages}
                   className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next

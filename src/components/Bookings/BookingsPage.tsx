@@ -5,7 +5,7 @@ import Modal from '../Common/Modal';
 
 interface Booking {
   _id: string;
-  bookingId?: string;
+  bookingRef?: string;
   user?: {
     _id: string;
     firstName: string;
@@ -28,9 +28,11 @@ interface Booking {
   status: string;
   createdAt: string;
   specialRequests?: string;
-  selectedAddons?: Array<{
-    addon: { name: string; price: number };
+  addons?: Array<{
+    name: string;
     quantity: number;
+    unitPrice: number;
+    totalPrice: number;
   }>;
 }
 
@@ -41,6 +43,11 @@ const BookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [statusSummary, setStatusSummary] = useState<Record<string, { count: number }>>({});
+  const PAGE_SIZE = 20;
   
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -53,9 +60,16 @@ const BookingsPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await adminApi.getBookings();
-      const bookingsData = response.data?.data || response.data?.bookings || response.data || response.bookings || [];
+      const params: { page: number; limit: number; status?: string; search?: string } = { page, limit: PAGE_SIZE };
+      if (statusFilter) params.status = statusFilter;
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      const response = await adminApi.getBookings(params);
+      // GET /admin/bookings -> { data, total, totalPages, statusSummary }
+      const bookingsData = response.data?.data || [];
       setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+      setTotalMatching(response.data?.total || 0);
+      setTotalPages(response.data?.totalPages || 1);
+      setStatusSummary(response.data?.statusSummary || {});
     } catch (err: any) {
       console.error('Error loading bookings:', err);
       setError(err.message || 'Failed to load bookings');
@@ -66,7 +80,12 @@ const BookingsPage: React.FC = () => {
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [page, statusFilter]);
+
+  const handleSearch = () => {
+    if (page === 1) loadBookings();
+    else setPage(1);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -131,34 +150,20 @@ const BookingsPage: React.FC = () => {
   };
 
   const getBookingDisplayId = (booking: Booking) => {
-    return booking.bookingId || `BK${booking._id.slice(-6).toUpperCase()}`;
+    return booking.bookingRef || `BK${booking._id.slice(-6).toUpperCase()}`;
   };
 
-  // Filter bookings
-  const filteredBookings = bookings.filter(booking => {
-    const displayId = getBookingDisplayId(booking);
-    const customerName = booking.user ? `${booking.user.firstName} ${booking.user.lastName}` : '';
-    
-    const matchesSearch = searchQuery === '' || 
-      displayId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.venue?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === '' || 
-      booking.status?.toUpperCase() === statusFilter.toUpperCase();
-    
-    const matchesDate = dateFilter === '' || 
-      booking.eventDate.startsWith(dateFilter);
-    
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  // Search and status are filtered on the server; the date filter narrows the loaded page
+  const filteredBookings = bookings.filter(booking =>
+    dateFilter === '' || booking.eventDate.startsWith(dateFilter)
+  );
 
-  // Stats
+  // Stats: platform-wide totals from the server
   const stats = {
-    total: bookings.length,
-    confirmed: bookings.filter(b => b.status?.toUpperCase() === 'CONFIRMED').length,
-    pending: bookings.filter(b => b.status?.toUpperCase() === 'PENDING').length,
-    cancelled: bookings.filter(b => b.status?.toUpperCase() === 'CANCELLED').length,
+    total: Object.values(statusSummary).reduce((sum, s) => sum + s.count, 0),
+    confirmed: statusSummary.CONFIRMED?.count || 0,
+    pending: statusSummary.PENDING?.count || 0,
+    cancelled: statusSummary.CANCELLED?.count || 0,
   };
 
   if (loading) {
@@ -210,16 +215,17 @@ const BookingsPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by booking ID, customer name, venue..."
+              placeholder="Search by booking ID, customer name, venue (press Enter)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <div className="flex gap-2">
-            <select 
+          <div className="flex flex-wrap gap-2">
+            <select aria-label="Status filter" 
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="">All Status</option>
@@ -346,6 +352,29 @@ const BookingsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
+            <p className="text-sm text-gray-500">
+              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalMatching)} of {totalMatching}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Booking Modal */}
@@ -422,14 +451,14 @@ const BookingsPage: React.FC = () => {
               </div>
             </div>
 
-            {selectedBooking.selectedAddons && selectedBooking.selectedAddons.length > 0 && (
+            {selectedBooking.addons && selectedBooking.addons.length > 0 && (
               <div className="pt-4 border-t">
                 <h4 className="font-semibold text-gray-900 mb-3">Selected Add-ons</h4>
                 <div className="space-y-2">
-                  {selectedBooking.selectedAddons.map((item, idx) => (
+                  {selectedBooking.addons.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm">
-                      <span>{item.addon?.name || 'Add-on'} x{item.quantity}</span>
-                      <span>₹{((item.addon?.price || 0) * item.quantity).toLocaleString()}</span>
+                      <span>{item.name || 'Add-on'} x{item.quantity}</span>
+                      <span>₹{(item.totalPrice ?? (item.unitPrice || 0) * item.quantity).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

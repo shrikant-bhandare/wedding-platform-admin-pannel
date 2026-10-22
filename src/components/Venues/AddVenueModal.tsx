@@ -265,7 +265,7 @@ const AddVenueModal: React.FC<AddVenueModalProps> = ({ isOpen, onClose, onSucces
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Venue Type *</label>
-            <select
+            <select aria-label="Venue type"
               name="venueType"
               value={formData.venueType}
               onChange={handleChange}
@@ -282,7 +282,7 @@ const AddVenueModal: React.FC<AddVenueModalProps> = ({ isOpen, onClose, onSucces
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
-            <select
+            <select aria-label="Vendor"
               name="vendorId"
               value={formData.vendorId}
               onChange={handleChange}

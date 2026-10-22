@@ -170,7 +170,7 @@ const SettingsPage: React.FC<{ onEmiToggle?: (enabled: boolean) => void }> = ({ 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         {/* Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-8 px-6 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -229,7 +229,7 @@ const SettingsPage: React.FC<{ onEmiToggle?: (enabled: boolean) => void }> = ({ 
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
-                    <select 
+                    <select aria-label="Currency" 
                       value={settings.currency}
                       onChange={(e) => updateSettings({ currency: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"

@@ -3,7 +3,6 @@ import { Search, Eye, Trash2, Clock, CheckCircle, XCircle, FileCheck, Loader, Ch
 import { adminApi } from '../../services/api';
 
 import { getUploadUrl } from '../../utils/imageUrl';
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
 
 const VendorEnquiriesPage: React.FC = () => {
   const [enquiries, setEnquiries] = useState<any[]>([]);
@@ -164,7 +163,7 @@ const VendorEnquiriesPage: React.FC = () => {
             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
         </div>
-        <select
+        <select aria-label="Status filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"

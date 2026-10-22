@@ -8,7 +8,7 @@ interface Payment {
   paymentId?: string;
   booking?: {
     _id: string;
-    bookingId?: string;
+    bookingRef?: string;
   };
   user?: {
     _id: string;
@@ -25,7 +25,14 @@ interface Payment {
   paymentMethod?: string;
   status: string;
   createdAt: string;
-  transactionId?: string;
+  razorpayPaymentId?: string;
+}
+
+interface PaymentSummary {
+  totalRevenue: number;
+  platformFees: number;
+  vendorPayouts: number;
+  pendingAmount: number;
 }
 
 const PaymentsPage: React.FC = () => {
@@ -35,6 +42,11 @@ const PaymentsPage: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [summary, setSummary] = useState<PaymentSummary | null>(null);
+  const PAGE_SIZE = 20;
   
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -44,9 +56,15 @@ const PaymentsPage: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await adminApi.getPayments();
-      const paymentsData = response.data?.payments || response.data || response.payments || [];
+      const params: { page: number; limit: number; status?: string } = { page, limit: PAGE_SIZE };
+      if (statusFilter) params.status = statusFilter;
+      const response = await adminApi.getPayments(params);
+      // GET /admin/payments -> { payments, total, totalPages, summary }
+      const paymentsData = response.data?.payments || [];
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      setTotalMatching(response.data?.total || 0);
+      setTotalPages(response.data?.totalPages || 1);
+      setSummary(response.data?.summary || null);
     } catch (err: any) {
       console.error('Error loading payments:', err);
       setError(err.message || 'Failed to load payments');
@@ -57,7 +75,7 @@ const PaymentsPage: React.FC = () => {
 
   useEffect(() => {
     loadPayments();
-  }, []);
+  }, [page, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -94,7 +112,7 @@ const PaymentsPage: React.FC = () => {
   };
 
   const getBookingDisplayId = (payment: Payment) => {
-    if (payment.booking?.bookingId) return payment.booking.bookingId;
+    if (payment.booking?.bookingRef) return payment.booking.bookingRef;
     if (payment.booking?._id) return `BK${payment.booking._id.slice(-6).toUpperCase()}`;
     return 'N/A';
   };
@@ -129,7 +147,7 @@ const PaymentsPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Filter payments
+  // Status is filtered on the server; search and method narrow the loaded page
   const filteredPayments = payments.filter(payment => {
     const displayId = getPaymentDisplayId(payment);
     const bookingId = getBookingDisplayId(payment);
@@ -140,21 +158,18 @@ const PaymentsPage: React.FC = () => {
       bookingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customerName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === '' || 
-      payment.status?.toUpperCase() === statusFilter.toUpperCase();
-    
     const matchesMethod = methodFilter === '' || 
       payment.paymentMethod?.toUpperCase() === methodFilter.toUpperCase();
     
-    return matchesSearch && matchesStatus && matchesMethod;
+    return matchesSearch && matchesMethod;
   });
 
-  // Stats
+  // Stats: platform-wide totals from the server; revenue/fees/payouts count COMPLETED payments only
   const stats = {
-    totalRevenue: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
-    platformFees: payments.reduce((sum, p) => sum + (p.platformFee || 0), 0),
-    vendorPayouts: payments.reduce((sum, p) => sum + (p.vendorAmount || 0), 0),
-    pending: payments.filter(p => p.status?.toUpperCase() === 'PENDING').reduce((sum, p) => sum + (p.amount || 0), 0),
+    totalRevenue: summary?.totalRevenue || 0,
+    platformFees: summary?.platformFees || 0,
+    vendorPayouts: summary?.vendorPayouts || 0,
+    pending: summary?.pendingAmount || 0,
   };
 
   const formatCurrency = (amount: number) => {
@@ -175,7 +190,7 @@ const PaymentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
           <p className="text-gray-600">Track all payment transactions</p>
@@ -237,10 +252,10 @@ const PaymentsPage: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <div className="flex gap-2">
-            <select 
+          <div className="flex flex-wrap gap-2">
+            <select aria-label="Status filter" 
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="">All Status</option>
@@ -249,7 +264,7 @@ const PaymentsPage: React.FC = () => {
               <option value="REFUNDED">Refunded</option>
               <option value="FAILED">Failed</option>
             </select>
-            <select 
+            <select aria-label="Method filter" 
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -337,6 +352,29 @@ const PaymentsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
+            <p className="text-sm text-gray-500">
+              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalMatching)} of {totalMatching}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Payment Modal */}
@@ -401,10 +439,10 @@ const PaymentsPage: React.FC = () => {
               </div>
             </div>
 
-            {selectedPayment.transactionId && (
+            {selectedPayment.razorpayPaymentId && (
               <div className="pt-4 border-t">
                 <p className="text-sm text-gray-500">Transaction ID</p>
-                <p className="font-mono text-sm">{selectedPayment.transactionId}</p>
+                <p className="font-mono text-sm">{selectedPayment.razorpayPaymentId}</p>
               </div>
             )}
 

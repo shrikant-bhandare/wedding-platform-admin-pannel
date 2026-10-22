@@ -52,8 +52,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be exactly 10 digits';
+    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      newErrors.phone = 'Phone must be 10 digits starting with 6-9';
     }
 
     if (!formData.role) {
@@ -70,6 +70,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
       newErrors.password = 'Password must contain at least one lowercase letter';
     } else if (!/\d/.test(formData.password)) {
       newErrors.password = 'Password must contain at least one number';
+    } else if (!/[@$!%*?&]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one special character (@$!%*?&)';
+    } else if (!/^[A-Za-z\d@$!%*?&]+$/.test(formData.password)) {
+      newErrors.password = 'Password may only contain letters, numbers and @$!%*?&';
     }
 
     if (!formData.confirmPassword) {
@@ -207,7 +211,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSuccess 
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-          <select
+          <select aria-label="Role"
             name="role"
             value={formData.role}
             onChange={handleChange}

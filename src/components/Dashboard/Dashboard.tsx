@@ -4,8 +4,6 @@ import {
   Building2,
   Users,
   IndianRupee,
-  ArrowUpRight,
-  ArrowDownRight,
   Loader
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -51,56 +49,40 @@ const Dashboard: React.FC = () => {
     { 
       title: 'Total Revenue', 
       value: dashboardData?.totalRevenue ? `₹${dashboardData.totalRevenue.toLocaleString()}` : '₹0', 
-      change: '+12.5%', 
-      isPositive: true,
       icon: IndianRupee,
       color: 'bg-green-500'
     },
     { 
       title: 'Total Bookings', 
-      value: dashboardData?.totalBookings?.toString() || String(recentBookings.length), 
-      change: '+8.2%', 
-      isPositive: true,
+      value: dashboardData?.totalBookings?.toString() || '0', 
       icon: Calendar,
       color: 'bg-blue-500'
     },
     { 
       title: 'Active Venues', 
-      value: (dashboardData?.totalVenues || dashboardData?.activeVenues || 0).toString(), 
-      change: '+5.1%', 
-      isPositive: true,
+      value: (dashboardData?.activeVenues || dashboardData?.totalVenues || 0).toString(), 
       icon: Building2,
       color: 'bg-purple-500'
     },
     { 
       title: 'Total Users', 
       value: dashboardData?.totalUsers?.toString() || '0', 
-      change: '+3.2%', 
-      isPositive: true,
       icon: Users,
       color: 'bg-orange-500'
     },
   ];
 
-  const revenueData = dashboardData?.revenueData || [
-    { month: 'Jan', revenue: 320000 },
-    { month: 'Feb', revenue: 450000 },
-    { month: 'Mar', revenue: 380000 },
-    { month: 'Apr', revenue: 520000 },
-    { month: 'May', revenue: 480000 },
-    { month: 'Jun', revenue: 620000 },
-    { month: 'Jul', revenue: 580000 },
-  ];
-
-  const bookingsData = dashboardData?.bookingsData || [
-    { day: 'Mon', bookings: 45 },
-    { day: 'Tue', bookings: 52 },
-    { day: 'Wed', bookings: 38 },
-    { day: 'Thu', bookings: 65 },
-    { day: 'Fri', bookings: 78 },
-    { day: 'Sat', bookings: 92 },
-    { day: 'Sun', bookings: 85 },
-  ];
+  // Backend sends daily series for the last 30 days: revenueTrend [{ date, revenue }], bookingTrend [{ date, bookings }]
+  const formatDay = (date: string) =>
+    new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  const revenueData = (dashboardData?.revenueTrend || []).map((r: { date: string; revenue: number }) => ({
+    day: formatDay(r.date),
+    revenue: r.revenue,
+  }));
+  const bookingsData = (dashboardData?.bookingTrend || []).map((b: { date: string; bookings: number }) => ({
+    day: formatDay(b.date),
+    bookings: b.bookings,
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -155,10 +137,6 @@ const Dashboard: React.FC = () => {
                 <div className={`p-3 rounded-lg ${stat.color}`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
-                <div className={`flex items-center text-sm font-medium ${stat.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                  {stat.change}
-                </div>
               </div>
               <div className="mt-4">
                 <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
@@ -173,30 +151,38 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Overview</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip />
-              <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={3} dot={{ fill: '#16a34a' }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue (last 30 days)</h3>
+          {revenueData.length === 0 ? (
+            <div className="h-[300px] flex items-center justify-center text-gray-500 text-sm">No completed payments in the last 30 days</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="day" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip />
+                <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={3} dot={{ fill: '#16a34a' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Bookings Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Bookings</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={bookingsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip />
-              <Bar dataKey="bookings" fill="#16a34a" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Bookings (last 30 days)</h3>
+          {bookingsData.length === 0 ? (
+            <div className="h-[300px] flex items-center justify-center text-gray-500 text-sm">No bookings in the last 30 days</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={bookingsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="day" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="bookings" fill="#16a34a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -228,7 +214,7 @@ const Dashboard: React.FC = () => {
                 recentBookings.map((booking) => (
                   <tr key={booking._id || booking.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {(booking._id || booking.id)?.slice(-8).toUpperCase()}
+                      {booking.bookingRef || (booking._id || booking.id)?.slice(-8).toUpperCase()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {booking.venue?.name || booking.venueName || 'N/A'}

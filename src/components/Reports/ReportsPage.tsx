@@ -24,7 +24,7 @@ const ReportsPage: React.FC = () => {
       const [statsRes, bookingsRes, venuesRes, paymentsRes] = await Promise.all([
         adminApi.getDashboardStats().catch(() => null),
         adminApi.getBookings({ limit: 500 }).catch(() => null),
-        adminApi.getVenues({ limit: 500 }).catch(() => null),
+        adminApi.getVenues({ limit: 100 }).catch(() => null),
         adminApi.getPayments({ limit: 500 }).catch(() => null),
       ]);
 
@@ -45,8 +45,11 @@ const ReportsPage: React.FC = () => {
     }
   };
 
+  // Only money actually received counts as revenue (not PENDING/FAILED/REFUNDED payments)
+  const completedPayments = payments.filter((p: any) => p.status?.toUpperCase() === 'COMPLETED');
+
   // Compute key metrics
-  const totalRevenue = dashboardStats?.totalRevenue || payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+  const totalRevenue = dashboardStats?.totalRevenue || completedPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
   const totalBookingsCount = dashboardStats?.totalBookings || bookings.length;
   const avgBookingValue = totalBookingsCount > 0 ? Math.round(totalRevenue / totalBookingsCount) : 0;
   const confirmedCount = bookings.filter((b: any) => ['CONFIRMED', 'COMPLETED'].includes(b.status?.toUpperCase())).length;
@@ -55,7 +58,7 @@ const ReportsPage: React.FC = () => {
   // Monthly revenue from payments data
   const monthlyRevenue = (() => {
     const monthMap: Record<string, { key: string; revenue: number }> = {};
-    payments.forEach((p: any) => {
+    completedPayments.forEach((p: any) => {
       if (!p.createdAt) return;
       const date = new Date(p.createdAt);
       const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -108,7 +111,9 @@ const ReportsPage: React.FC = () => {
       if (id === 'unknown') return;
       if (!venueMap[id]) venueMap[id] = { name, bookings: 0, revenue: 0 };
       venueMap[id].bookings++;
-      venueMap[id].revenue += b.totalAmount || 0;
+      if (['CONFIRMED', 'COMPLETED'].includes(b.status?.toUpperCase())) {
+        venueMap[id].revenue += b.totalAmount || 0;
+      }
     });
     venues.forEach((v: any) => {
       const id = v._id;
@@ -173,7 +178,7 @@ const ReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
           <p className="text-gray-600">Comprehensive business insights</p>

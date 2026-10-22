@@ -323,7 +323,7 @@ const EMIPage: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
-                <select 
+                <select aria-label="Status filter" 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"

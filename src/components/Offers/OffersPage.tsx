@@ -117,8 +117,8 @@ const AdminOffersPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
-        <div className="flex-1 relative">
+      <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+        <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -128,7 +128,7 @@ const AdminOffersPage: React.FC = () => {
             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
         </div>
-        <select
+        <select aria-label="Status filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -138,7 +138,7 @@ const AdminOffersPage: React.FC = () => {
           <option value="DRAFT">Draft</option>
           <option value="EXPIRED">Expired</option>
         </select>
-        <select
+        <select aria-label="Type filter"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -173,6 +173,7 @@ const AdminOffersPage: React.FC = () => {
             <p className="text-sm">Create your first offer to get started</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -255,6 +256,7 @@ const AdminOffersPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Pagination */}

@@ -186,9 +186,7 @@ const VendorsPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('enquiries')}
-              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                activeTab === 'enquiries' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className="pb-3 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 border-transparent text-gray-500 hover:text-gray-700"
             >
               <ClipboardList className="w-4 h-4" /> Enquiries
             </button>
@@ -290,7 +288,7 @@ const VendorsPage: React.FC = () => {
             />
           </div>
           <div className="flex gap-2">
-            <select 
+            <select aria-label="Status filter" 
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"

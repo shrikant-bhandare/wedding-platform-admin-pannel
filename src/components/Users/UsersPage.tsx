@@ -221,7 +221,7 @@ const UsersPage: React.FC = () => {
             />
           </div>
           <div className="flex gap-2">
-            <select
+            <select aria-label="Status filter"
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -230,7 +230,7 @@ const UsersPage: React.FC = () => {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            <select
+            <select aria-label="Role filter"
               value={roleFilter}
               onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"

@@ -37,6 +37,11 @@ const VenuesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const PAGE_SIZE = 20;
   
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,18 +52,25 @@ const VenuesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page, statusFilter]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      const params: { page: number; limit: number; status?: string; search?: string } = { page, limit: PAGE_SIZE };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (searchQuery.trim()) params.search = searchQuery.trim();
       const [venuesRes, vendorsRes] = await Promise.all([
-        adminApi.getVenues(),
-        adminApi.getVendors({ status: 'APPROVED' })
+        adminApi.getVenues(params),
+        adminApi.getVendors({ status: 'APPROVED', limit: 1000 })
       ]);
       
-      const venueData = venuesRes.data?.data || venuesRes.data?.venues || venuesRes.data || venuesRes.venues || [];
+      // GET /admin/venues -> { data, total, totalPages, statusCounts }
+      const venueData = venuesRes.data?.data || [];
       setVenues(Array.isArray(venueData) ? venueData : []);
+      setTotalMatching(venuesRes.data?.total || 0);
+      setTotalPages(venuesRes.data?.totalPages || 1);
+      setStatusCounts(venuesRes.data?.statusCounts || {});
       
       const vendorData = vendorsRes.data?.data || vendorsRes.data?.vendors || vendorsRes.data || [];
       setVendors(Array.isArray(vendorData) ? vendorData : []);
@@ -90,12 +102,18 @@ const VenuesPage: React.FC = () => {
   };
 
   const handleStatusChange = async (venue: Venue, newStatus: string) => {
+    let reason = '';
+    if (newStatus !== 'ACTIVE') {
+      const input = prompt('Enter rejection reason:');
+      if (input === null) return;
+      reason = input.trim() || 'Rejected by admin';
+    }
     setActionLoading(venue._id);
     try {
       if (newStatus === 'ACTIVE') {
         await adminApi.approveVenue(venue._id);
       } else {
-        await adminApi.rejectVenue(venue._id, 'Status changed by admin');
+        await adminApi.rejectVenue(venue._id, reason);
       }
       await loadData();
     } catch (err: any) {
@@ -122,17 +140,18 @@ const VenuesPage: React.FC = () => {
     }
   };
 
-  const filteredVenues = venues.filter(venue => {
-    const matchesSearch = venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      venue.location?.city?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || venue.status?.toUpperCase() === statusFilter.toUpperCase();
-    return matchesSearch && matchesStatus;
-  });
+  // Status and search filtering happen on the server
+  const filteredVenues = venues;
+
+  const handleSearch = () => {
+    if (page === 1) loadData();
+    else setPage(1);
+  };
 
   const stats = {
-    total: venues.length,
-    active: venues.filter(v => v.status?.toUpperCase() === 'ACTIVE').length,
-    pending: venues.filter(v => v.status?.toUpperCase() === 'PENDING').length,
+    total: Object.values(statusCounts).reduce((sum, n) => sum + n, 0),
+    active: statusCounts.ACTIVE || 0,
+    pending: statusCounts.PENDING || 0,
   };
 
   if (loading) {
@@ -155,7 +174,7 @@ const VenuesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Venues</h1>
-          <p className="text-gray-600">Manage all registered venues ({venues.length} total)</p>
+          <p className="text-gray-600">Manage all registered venues ({stats.total} total)</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -189,21 +208,23 @@ const VenuesPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search venues..."
+              placeholder="Search by name or city (press Enter)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <select 
+          <select aria-label="Status filter" 
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             title="Filter by status"
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             <option value="all">All Status</option>
             <option value="ACTIVE">Active</option>
             <option value="PENDING">Pending</option>
+            <option value="INACTIVE">Inactive</option>
             <option value="REJECTED">Rejected</option>
           </select>
         </div>
@@ -286,6 +307,30 @@ const VenuesPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalMatching)} of {totalMatching}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded-lg text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 border rounded-lg text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Venue Modal */}
       <AddVenueModal

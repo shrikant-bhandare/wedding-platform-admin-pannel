@@ -29,15 +29,17 @@ interface WeddingPlan {
     };
   };
   services: Array<{
-    id: string;
-    name: string;
+    serviceId: string;
+    serviceName: string;
     category: string;
     price: number;
+    quantity?: number;
   }>;
   addons: Array<{
-    id: string;
-    name: string;
+    addonId: string;
+    addonName: string;
     price: number;
+    quantity: number;
   }>;
   totalAmount: number;
   status: string;
@@ -65,6 +67,10 @@ const WeddingPlansPage: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const PAGE_SIZE = 20;
   
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -76,15 +82,31 @@ const WeddingPlansPage: React.FC = () => {
       setLoading(true);
       setError('');
       const [plansResponse, statsResponse] = await Promise.all([
-        adminApi.getWeddingPlans(),
+        adminApi.getWeddingPlans({ page, limit: PAGE_SIZE, ...(statusFilter ? { status: statusFilter } : {}) }),
         adminApi.getWeddingPlanStats()
       ]);
       
-      const plansData = plansResponse.data?.data || plansResponse.data?.plans || plansResponse.data || [];
+      // GET /wedding-plans/admin/all -> { data, pagination: { total, totalPages } }
+      const plansData = plansResponse.data?.data || [];
       setPlans(Array.isArray(plansData) ? plansData : []);
+      setTotalMatching(plansResponse.data?.pagination?.total || 0);
+      setTotalPages(plansResponse.data?.pagination?.totalPages || 1);
       
-      if (statsResponse.data) {
-        setStats(statsResponse.data);
+      // Backend returns { stats: { total, byStatus: { draft, ... }, totalValue } }
+      const rawStats = statsResponse.data?.stats;
+      if (rawStats) {
+        const total = rawStats.total || 0;
+        const totalValue = rawStats.totalValue || 0;
+        setStats({
+          totalPlans: total,
+          statusBreakdown: Object.fromEntries(
+            Object.entries(rawStats.byStatus || {}).map(([key, count]) => [key.toUpperCase(), count as number])
+          ),
+          totalRevenue: totalValue,
+          avgBudget: total ? Math.round(totalValue / total) : 0,
+          topCities: [],
+          topEventTypes: [],
+        });
       }
     } catch (err: any) {
       console.error('Error loading wedding plans:', err);
@@ -96,7 +118,7 @@ const WeddingPlansPage: React.FC = () => {
 
   useEffect(() => {
     loadPlans();
-  }, []);
+  }, [page, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -152,7 +174,7 @@ const WeddingPlansPage: React.FC = () => {
     return `WP${plan._id.slice(-6).toUpperCase()}`;
   };
 
-  // Filter plans
+  // Status is filtered on the server; search narrows the loaded page
   const filteredPlans = plans.filter(plan => {
     const displayId = getPlanDisplayId(plan);
     const coupleNames = `${plan.brideName} ${plan.groomName}`;
@@ -164,10 +186,7 @@ const WeddingPlansPage: React.FC = () => {
       customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       plan.city?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === '' || 
-      plan.status?.toUpperCase() === statusFilter.toUpperCase();
-    
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   if (loading) {
@@ -248,10 +267,10 @@ const WeddingPlansPage: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
           />
         </div>
-        <select
+        <select aria-label="Status filter"
           title="Filter by status"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
         >
           <option value="">All Statuses</option>
@@ -369,6 +388,29 @@ const WeddingPlansPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
+            <p className="text-sm text-gray-500">
+              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalMatching)} of {totalMatching}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Modal */}
@@ -475,7 +517,7 @@ const WeddingPlansPage: React.FC = () => {
                   {selectedPlan.services.map((service, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                       <div>
-                        <p className="font-medium">{service.name}</p>
+                        <p className="font-medium">{service.serviceName}{service.quantity && service.quantity > 1 ? ` x${service.quantity}` : ''}</p>
                         <p className="text-xs text-gray-500">{service.category}</p>
                       </div>
                       <span className="font-medium">{formatCurrency(service.price)}</span>
@@ -492,7 +534,7 @@ const WeddingPlansPage: React.FC = () => {
                 <div className="flex flex-wrap gap-2">
                   {selectedPlan.addons.map((addon, idx) => (
                     <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                      {addon.name} - {formatCurrency(addon.price)}
+                      {addon.addonName}{addon.quantity > 1 ? ` x${addon.quantity}` : ''} - {formatCurrency(addon.price)}
                     </span>
                   ))}
                 </div>

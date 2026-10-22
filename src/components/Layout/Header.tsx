@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Bell, Search, User, LogOut } from 'lucide-react';
+import { adminApi } from '../../services/api';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -7,12 +8,20 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuToggle, onLogout }) => {
+  // Show the signed-in account instead of a fixed name
+  const storedUser = adminApi.getStoredUser();
+  const displayName = storedUser ? `${storedUser.firstName || ""} ${storedUser.lastName || ""}`.trim() || storedUser.email : "Admin User";
+  const initials = (storedUser
+    ? `${storedUser.firstName?.[0] || ""}${storedUser.lastName?.[0] || ""}` || storedUser.email?.[0] || ""
+    : "").toUpperCase() || "A";
+  const roleLabel = storedUser?.role === "SUPER_ADMIN" ? "Super Admin" : "Admin";
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
             onClick={onMenuToggle}
+            aria-label="Toggle sidebar"
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <Menu className="w-5 h-5 text-gray-600" />
@@ -31,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, onLogout }) => {
 
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button aria-label="Notifications" className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <Bell className="w-5 h-5 text-gray-600" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
@@ -40,11 +49,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, onLogout }) => {
           <div className="relative group">
             <div className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded-lg">
               <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">AD</span>
+                <span className="text-white text-sm font-medium">{initials}</span>
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-900">Admin User</p>
-                <p className="text-xs text-gray-500">Super Admin</p>
+                <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                <p className="text-xs text-gray-500">{roleLabel}</p>
               </div>
             </div>
             

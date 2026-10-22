@@ -24,7 +24,9 @@ type PageType = 'dashboard' | 'venues' | 'bookings' | 'users' | 'vendors' | 'pay
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => adminApi.isAuthenticated());
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar starts collapsed on phones/tablets so the content area stays usable
+  const isSmallScreen = () => window.innerWidth < 1024;
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isSmallScreen());
   const [emiEnabled, setEmiEnabled] = useState(false);
 
   useEffect(() => {
@@ -39,9 +41,10 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       adminApi.getSettings().then((res: any) => {
-        const data = res?.data?.data || res?.data || res;
-        if (typeof data.emiEnabled === 'boolean') {
-          setEmiEnabled(data.emiEnabled);
+        // Response body is { data: { settings } }
+        const settings = res?.data?.settings;
+        if (typeof settings?.emiEnabled === 'boolean') {
+          setEmiEnabled(settings.emiEnabled);
         }
       }).catch(() => {});
     }
@@ -101,7 +104,10 @@ function App() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={(page) => {
+          setCurrentPage(page);
+          if (isSmallScreen()) setSidebarOpen(false);
+        }}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         emiEnabled={emiEnabled}

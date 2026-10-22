@@ -89,10 +89,13 @@ const CreateBlogModal: React.FC<CreateBlogModalProps> = ({ isOpen, onClose, onSu
     setLoading(true);
     setError('');
     try {
+      // The API only accepts a valid URL for featuredImage: omit it when empty (or clear it on edit)
+      const { featuredImage, ...rest } = formData;
+      const image = featuredImage.trim();
       if (editData?._id) {
-        await adminApi.updateBlog(editData._id, formData);
+        await adminApi.updateBlog(editData._id, { ...rest, featuredImage: image || null });
       } else {
-        await adminApi.createBlog(formData);
+        await adminApi.createBlog(image ? { ...rest, featuredImage: image } : rest);
       }
       onSuccess();
       onClose();
@@ -144,7 +147,7 @@ const CreateBlogModal: React.FC<CreateBlogModalProps> = ({ isOpen, onClose, onSu
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-              <select
+              <select aria-label="Category"
                 value={formData.category}
                 onChange={(e) => { setFormData(prev => ({ ...prev, category: e.target.value })); setErrors(prev => ({ ...prev, category: '' })); }}
                 className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.category ? 'border-red-300' : 'border-gray-300'}`}
@@ -158,7 +161,7 @@ const CreateBlogModal: React.FC<CreateBlogModalProps> = ({ isOpen, onClose, onSu
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
+              <select aria-label="Status"
                 value={formData.status}
                 onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"

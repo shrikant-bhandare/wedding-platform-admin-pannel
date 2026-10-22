@@ -49,11 +49,14 @@ interface Order {
     timestamp: string;
     note?: string;
   }>;
+  // Admin cancellations fill `cancellation`; customer cancellations fill cancellationReason/cancelledAt
   cancellation?: {
     cancelledAt: string;
     cancelledBy?: string;
     reason?: string;
   };
+  cancellationReason?: string;
+  cancelledAt?: string;
 }
 
 const OrdersPage: React.FC = () => {
@@ -63,6 +66,9 @@ const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [statusSummary, setStatusSummary] = useState<Record<string, { count: number; totalAmount: number }>>({});
   const ITEMS_PER_PAGE = 10;
 
   // Modal states
@@ -80,8 +86,12 @@ const OrdersPage: React.FC = () => {
       if (statusFilter) params.status = statusFilter;
       if (searchQuery) params.search = searchQuery;
       const response = await adminApi.getOrders(params);
-      const ordersData = response.data?.data || response.data?.bookings || response.data || [];
+      // GET /admin/bookings -> { data, total, totalPages, statusSummary }
+      const ordersData = response.data?.data || [];
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setTotalMatching(response.data?.total || 0);
+      setTotalPages(response.data?.totalPages || 1);
+      setStatusSummary(response.data?.statusSummary || {});
     } catch (err: any) {
       console.error('Error loading orders:', err);
       setError(err.response?.data?.message || err.message || 'Failed to load orders');
@@ -95,8 +105,8 @@ const OrdersPage: React.FC = () => {
   }, [page, statusFilter]);
 
   const handleSearch = () => {
-    setPage(1);
-    loadOrders();
+    if (page === 1) loadOrders();
+    else setPage(1);
   };
 
   const getStatusColor = (status: string) => {
@@ -169,28 +179,15 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  // Stats
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status?.toUpperCase() === 'PENDING').length;
-  const confirmedOrders = orders.filter(o => o.status?.toUpperCase() === 'CONFIRMED').length;
-  const totalRevenue = orders.filter(o => ['CONFIRMED', 'COMPLETED'].includes(o.status?.toUpperCase())).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  // Stats: platform-wide totals from the server, not just the current page
+  const totalOrders = Object.values(statusSummary).reduce((sum, s) => sum + s.count, 0);
+  const pendingOrders = statusSummary.PENDING?.count || 0;
+  const confirmedOrders = statusSummary.CONFIRMED?.count || 0;
+  const totalRevenue = (statusSummary.CONFIRMED?.totalAmount || 0) + (statusSummary.COMPLETED?.totalAmount || 0);
 
-  // Filter locally for search
-  const filteredOrders = orders.filter(order => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (order.bookingRef?.toLowerCase().includes(q)) ||
-        (order.user?.firstName?.toLowerCase().includes(q)) ||
-        (order.user?.lastName?.toLowerCase().includes(q)) ||
-        (order.user?.email?.toLowerCase().includes(q)) ||
-        (order.venue?.name?.toLowerCase().includes(q)) ||
-        (order.contactName?.toLowerCase().includes(q));
-    }
-    return true;
-  });
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = filteredOrders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // Search, status filter and pagination are applied on the server
+  const filteredOrders = orders;
+  const paginatedOrders = orders;
 
   return (
     <div className="space-y-6">
@@ -275,7 +272,7 @@ const OrdersPage: React.FC = () => {
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
             />
           </div>
-          <select
+          <select aria-label="Status filter"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -383,7 +380,7 @@ const OrdersPage: React.FC = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
               <p className="text-sm text-gray-500">
-                Showing {(page - 1) * ITEMS_PER_PAGE + 1} to {Math.min(page * ITEMS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length}
+                Showing {(page - 1) * ITEMS_PER_PAGE + 1} to {Math.min(page * ITEMS_PER_PAGE, totalMatching)} of {totalMatching}
               </p>
               <div className="flex gap-2">
                 <button
@@ -395,7 +392,7 @@ const OrdersPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  disabled={page >= totalPages}
                   className="px-3 py-1 border rounded-lg text-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
@@ -521,11 +518,16 @@ const OrdersPage: React.FC = () => {
             )}
 
             {/* Cancellation Info */}
-            {selectedOrder.cancellation && (
+            {(selectedOrder.cancellation || selectedOrder.cancellationReason || selectedOrder.cancelledAt) && (
               <div className="bg-red-50 rounded-lg p-4">
                 <h4 className="font-medium text-red-800 mb-2">Cancellation Details</h4>
-                <p className="text-sm text-red-700">Reason: {selectedOrder.cancellation.reason || 'Not specified'}</p>
-                <p className="text-sm text-red-600 mt-1">Cancelled: {formatDate(selectedOrder.cancellation.cancelledAt)}</p>
+                <p className="text-sm text-red-700">Reason: {selectedOrder.cancellation?.reason || selectedOrder.cancellationReason || 'Not specified'}</p>
+                {(selectedOrder.cancellation?.cancelledAt || selectedOrder.cancelledAt) && (
+                  <p className="text-sm text-red-600 mt-1">Cancelled: {formatDate((selectedOrder.cancellation?.cancelledAt || selectedOrder.cancelledAt)!)}</p>
+                )}
+                {selectedOrder.cancellation?.cancelledBy && (
+                  <p className="text-sm text-red-600 mt-1">By: {selectedOrder.cancellation.cancelledBy}</p>
+                )}
               </div>
             )}
 

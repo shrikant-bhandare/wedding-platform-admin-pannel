@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/
 
 class AdminApiClient {
   private client: AxiosInstance;
+  private refreshPromise: Promise<string> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -36,13 +37,54 @@ class AdminApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
+        const originalRequest = error.config as any;
+        // A failed login is a normal 401: let the login form show the error
+        if (originalRequest?.url?.includes('/auth/login')) {
+          return Promise.reject(error);
+        }
+        const refreshToken = localStorage.getItem('adminRefreshToken');
+        // Access tokens expire after 15 minutes: refresh once and retry before logging out
+        if (error.response?.status === 401 && refreshToken && originalRequest && !originalRequest._retry) {
+          originalRequest._retry = true;
+          try {
+            this.refreshPromise = this.refreshPromise || this.refreshAccessToken(refreshToken);
+            const newToken = await this.refreshPromise;
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return this.client(originalRequest);
+          } catch {
+            // fall through to logout
+          } finally {
+            this.refreshPromise = null;
+          }
+        }
         if (error.response?.status === 401) {
-          localStorage.removeItem('adminToken');
+          this.clearSession();
           window.location.href = '/login';
+        }
+        // Surface the backend's reason (e.g. "Payment not received") instead of axios's generic message
+        const apiMessage = (error.response?.data as any)?.message;
+        if (apiMessage) {
+          error.message = apiMessage;
         }
         return Promise.reject(error);
       }
     );
+  }
+
+  private async refreshAccessToken(refreshToken: string): Promise<string> {
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+    const data = response.data.data;
+    localStorage.setItem('adminToken', data.accessToken);
+    if (data.refreshToken) {
+      localStorage.setItem('adminRefreshToken', data.refreshToken);
+    }
+    return data.accessToken;
+  }
+
+  private clearSession() {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminRefreshToken');
+    localStorage.removeItem('adminUser');
   }
 
   // Auth
@@ -63,6 +105,9 @@ class AdminApiClient {
       if (data.accessToken) {
         localStorage.setItem('adminToken', data.accessToken);
         localStorage.setItem('adminUser', JSON.stringify(data.user));
+        if (data.refreshToken) {
+          localStorage.setItem('adminRefreshToken', data.refreshToken);
+        }
       }
       return response.data;
     } catch (err: any) {
@@ -75,8 +120,12 @@ class AdminApiClient {
   }
 
   async logout() {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    // Revoke the refresh token server-side (best effort), then clear the local session
+    const refreshToken = localStorage.getItem('adminRefreshToken');
+    if (refreshToken) {
+      axios.post(`${API_BASE_URL}/auth/logout`, { refreshToken }).catch(() => undefined);
+    }
+    this.clearSession();
   }
 
   getStoredUser() {
@@ -106,7 +155,8 @@ class AdminApiClient {
   }
 
   async createUser(data: { firstName: string; lastName: string; email: string; phone?: string; password: string; role: string }) {
-    const response = await this.client.post('/auth/register', data);
+    // /auth/register requires confirmPassword; the admin forms collect the password once
+    const response = await this.client.post('/auth/register', { ...data, confirmPassword: data.password });
     return response.data;
   }
 
@@ -162,8 +212,9 @@ class AdminApiClient {
   }
 
   // Venues
-  async getVenues(params?: { page?: number; limit?: number; status?: string }) {
-    const response = await this.client.get('/venues', { params });
+  async getVenues(params?: { page?: number; limit?: number; status?: string; search?: string }) {
+    // Admin listing: every status (the public /venues only returns ACTIVE)
+    const response = await this.client.get('/admin/venues', { params });
     return response.data;
   }
 
@@ -198,7 +249,7 @@ class AdminApiClient {
   }
 
   // Bookings
-  async getBookings(params?: { page?: number; limit?: number; status?: string }) {
+  async getBookings(params?: { page?: number; limit?: number; status?: string; search?: string }) {
     const response = await this.client.get('/admin/bookings', { params });
     return response.data;
   }
@@ -219,7 +270,7 @@ class AdminApiClient {
   }
 
   // Payments
-  async getPayments(params?: { page?: number; limit?: number }) {
+  async getPayments(params?: { page?: number; limit?: number; status?: string }) {
     const response = await this.client.get('/admin/payments', { params });
     return response.data;
   }
@@ -273,7 +324,8 @@ class AdminApiClient {
 
   // Blog
   async getBlogs(params?: { page?: number; limit?: number; status?: string; category?: string; search?: string }) {
-    const response = await this.client.get('/blog', { params });
+    // Admin listing: no status returns drafts too (the public /blog is published-only)
+    const response = await this.client.get('/admin/blog', { params });
     return response.data;
   }
 
@@ -304,7 +356,7 @@ class AdminApiClient {
 
   // Orders (Bookings management)
   async getOrders(params?: { page?: number; limit?: number; status?: string; search?: string }) {
-    const response = await this.client.get('/bookings', { params });
+    const response = await this.client.get('/admin/bookings', { params });
     return response.data;
   }
 
@@ -318,14 +370,13 @@ class AdminApiClient {
     return response.data;
   }
 
+  // Orders are bookings: use the admin booking routes (the POST confirm/cancel routes are vendor/customer only)
   async cancelOrder(id: string, reason: string) {
-    const response = await this.client.post(`/bookings/${id}/cancel`, { reason });
-    return response.data;
+    return this.cancelBooking(id, reason);
   }
 
   async confirmOrder(id: string) {
-    const response = await this.client.post(`/bookings/${id}/confirm`);
-    return response.data;
+    return this.updateBookingStatus(id, 'CONFIRMED');
   }
 
   // Settings
