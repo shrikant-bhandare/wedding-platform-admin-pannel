@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Eye, Check, Heart, Calendar, Loader, Users, MapPin, Palette, Timer, IndianRupee } from 'lucide-react';
 import { adminApi } from '../../services/api';
+import PlanEvents, { PlanEventItem } from './PlanEvents';
 import Modal from '../Common/Modal';
 
 interface WeddingPlan {
@@ -44,6 +45,7 @@ interface WeddingPlan {
   totalAmount: number;
   status: string;
   createdAt: string;
+  events?: PlanEventItem[];
   timelineItems?: Array<{
     time: string;
     event: string;
@@ -339,7 +341,7 @@ const WeddingPlansPage: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{plan.eventType}</span>
+                      <span className="text-sm text-gray-700">{plan.events && plan.events.length > 1 ? `${plan.events.length} events` : plan.eventType}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1 text-sm text-gray-700">
@@ -464,7 +466,7 @@ const WeddingPlansPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-gray-500">Event Type</span>
-                <p className="font-medium">{selectedPlan.eventType}</p>
+                <p className="font-medium">{selectedPlan.events && selectedPlan.events.length > 1 ? `${selectedPlan.events.length} events` : selectedPlan.eventType}</p>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Event Date</span>
@@ -496,8 +498,11 @@ const WeddingPlansPage: React.FC = () => {
               )}
             </div>
 
+            {!!selectedPlan.events?.length && <PlanEvents events={selectedPlan.events} />}
+
+
             {/* Venue */}
-            {selectedPlan.venueId && (
+            {selectedPlan.venueId && !selectedPlan.events?.length && (
               <div className="bg-rose-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <MapPin className="w-4 h-4" /> Selected Venue
@@ -512,7 +517,7 @@ const WeddingPlansPage: React.FC = () => {
             {/* Services */}
             {selectedPlan.services && selectedPlan.services.length > 0 && (
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Selected Services</h4>
+                <h4 className="font-medium text-gray-900 mb-2">{selectedPlan.events?.length ? 'For the whole celebration' : 'Selected Services'}</h4>
                 <div className="space-y-2">
                   {selectedPlan.services.map((service, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
@@ -520,7 +525,7 @@ const WeddingPlansPage: React.FC = () => {
                         <p className="font-medium">{service.serviceName}{service.quantity && service.quantity > 1 ? ` x${service.quantity}` : ''}</p>
                         <p className="text-xs text-gray-500">{service.category}</p>
                       </div>
-                      <span className="font-medium">{formatCurrency(service.price)}</span>
+                      <span className="font-medium">{formatCurrency(service.price * (service.quantity || 1))}</span>
                     </div>
                   ))}
                 </div>
@@ -542,7 +547,7 @@ const WeddingPlansPage: React.FC = () => {
             )}
 
             {/* Timeline */}
-            {selectedPlan.timelineItems && selectedPlan.timelineItems.length > 0 && (
+            {!selectedPlan.events?.length && selectedPlan.timelineItems && selectedPlan.timelineItems.length > 0 && (
               <div>
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <Timer className="w-4 h-4" /> Wedding Day Timeline
