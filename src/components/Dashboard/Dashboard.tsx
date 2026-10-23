@@ -50,25 +50,25 @@ const Dashboard: React.FC = () => {
       title: 'Total Revenue', 
       value: dashboardData?.totalRevenue ? `₹${dashboardData.totalRevenue.toLocaleString()}` : '₹0', 
       icon: IndianRupee,
-      color: 'bg-green-500'
+      color: 'bg-ink-700'
     },
     { 
       title: 'Total Bookings', 
       value: dashboardData?.totalBookings?.toString() || '0', 
       icon: Calendar,
-      color: 'bg-blue-500'
+      color: 'bg-gold-500'
     },
     { 
       title: 'Active Venues', 
       value: (dashboardData?.activeVenues || dashboardData?.totalVenues || 0).toString(), 
       icon: Building2,
-      color: 'bg-purple-500'
+      color: 'bg-rose-600'
     },
     { 
       title: 'Total Users', 
       value: dashboardData?.totalUsers?.toString() || '0', 
       icon: Users,
-      color: 'bg-orange-500'
+      color: 'bg-ink-900'
     },
   ];
 
@@ -159,9 +159,9 @@ const Dashboard: React.FC = () => {
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="day" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={3} dot={{ fill: '#16a34a' }} />
+                <YAxis stroke="#6b7280" width={56} tickFormatter={(v: number) => `₹${new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(v)}`} />
+                <Tooltip formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']} />
+                <Line type="monotone" dataKey="revenue" stroke="#1F4A48" strokeWidth={3} dot={{ fill: '#C49A47' }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
                 <XAxis dataKey="day" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="bookings" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bookings" fill="#C49A47" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

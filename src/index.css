@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Sohalaa brand base for the working panels */
+@layer base {
+  body { @apply font-sans text-gray-900; -webkit-font-smoothing: antialiased; }
+  ::selection { background: #E2C27A; color: #081B1C; }
+  :focus-visible { outline: 2px solid #C49A47; outline-offset: 2px; }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -12,4 +19,26 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Gold line-art bloom (shared with the customer site): the element must be positioned */
+.bloom { isolation: isolate; }
+.bloom::before,
+.bloom::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('/brand/gold-bloom.svg') no-repeat;
+}
+.bloom::before { background-position: right -2.5rem top -1rem; background-size: clamp(300px, 46vw, 680px) auto; opacity: 0.55; }
+.bloom::after { transform: scale(-1, -1); background-position: right -4rem top -3rem; background-size: clamp(200px, 28vw, 440px) auto; opacity: 0.3; }
+/* Sidebar: one quiet bloom rising from the bottom edge, clear of the navigation */
+.bloom-quiet { overflow: hidden; }
+.bloom-quiet::before { display: none; }
+.bloom-quiet::after { background-position: right -5rem top -6rem; background-size: 300px auto; opacity: 0.28; }
+@media (prefers-reduced-motion: reduce) {
+  .bloom::before,
+  .bloom::after { background-image: url('/brand/gold-bloom-static.svg'); }
 }

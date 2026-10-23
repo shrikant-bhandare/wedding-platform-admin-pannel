@@ -3,7 +3,8 @@ import { Download, TrendingUp, TrendingDown, Calendar, IndianRupee, Loader, Refr
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { adminApi } from '../../services/api';
 
-const COLORS = ['#16a34a', '#2563eb', '#9333ea', '#ea580c', '#dc2626', '#0891b2', '#ca8a04'];
+// Brand-derived categorical set: ink, gold, rose, then their lighter/darker steps
+const COLORS = ['#1F4A48', '#C49A47', '#C8285E', '#3A7670', '#86642A', '#8E1A43', '#7FA9A4'];
 
 const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -230,8 +231,8 @@ const ReportsPage: React.FC = () => {
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-gold-100 rounded-lg">
+              <Calendar className="w-6 h-6 text-gold-700" />
             </div>
             <div className="flex items-center text-green-600 text-sm">
               <TrendingUp className="w-4 h-4 mr-1" />
@@ -243,8 +244,8 @@ const ReportsPage: React.FC = () => {
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <IndianRupee className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-rose-100 rounded-lg">
+              <IndianRupee className="w-6 h-6 text-rose-600" />
             </div>
             <div className="flex items-center text-green-600 text-sm">
               <TrendingUp className="w-4 h-4 mr-1" />
@@ -256,8 +257,8 @@ const ReportsPage: React.FC = () => {
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
+            <div className="p-3 bg-ink-100 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-ink-700" />
             </div>
             <div className={`flex items-center text-sm ${Number(conversionRate) >= 50 ? 'text-green-600' : 'text-red-600'}`}>
               {Number(conversionRate) >= 50 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
@@ -279,9 +280,9 @@ const ReportsPage: React.FC = () => {
               <LineChart data={monthlyRevenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
+                <YAxis stroke="#6b7280" width={56} tickFormatter={(v: number) => `₹${new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(v)}`} />
                 <Tooltip formatter={(value: number) => [`₹${(value / 100000).toFixed(1)}L`, 'Revenue']} />
-                <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={3} dot={{ fill: '#16a34a' }} />
+                <Line type="monotone" dataKey="revenue" stroke="#1F4A48" strokeWidth={3} dot={{ fill: '#C49A47' }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -330,7 +331,7 @@ const ReportsPage: React.FC = () => {
               <XAxis dataKey="city" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip />
-              <Bar dataKey="bookings" fill="#16a34a" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="bookings" fill="#C49A47" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

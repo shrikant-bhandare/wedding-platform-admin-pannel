@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Loader, Eye, EyeOff } from 'lucide-react';
+import { Loader, Eye, EyeOff } from 'lucide-react';
 import { adminApi } from '../../services/api';
 
 interface LoginPageProps {
@@ -52,19 +52,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+    <div className="relative bloom min-h-screen bg-ink-950 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(42,94,90,0.45),transparent_60%)] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <MapPin className="w-12 h-12 text-green-600" />
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full"></div>
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">SOHALAA</h1>
+          <h1 className="flex justify-center">
+            <img src="/brand/logo-dark.webp" alt="Sohalaa" width={720} height={246} className="w-64 h-auto" />
+          </h1>
           <div className="mt-2">
-            <span className="bg-gray-900 text-white text-xs font-medium px-3 py-1 rounded">ADMIN PANEL</span>
+            <span className="bg-ink-950 text-gold-300 text-xs tracking-[0.18em] px-3 py-1 rounded">ADMIN PANEL</span>
           </div>
           <p className="text-gray-600 mt-4">Sign in to access the admin dashboard</p>
         </div>
@@ -133,7 +129,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         </form>
 
         <p className="text-xs text-gray-500 text-center mt-6">
-          © 2025 Sohalaa. All rights reserved.
+          © {new Date().getFullYear()} Sohalaa. All rights reserved.
         </p>
       </div>
     </div>

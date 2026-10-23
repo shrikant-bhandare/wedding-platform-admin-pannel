@@ -10,7 +10,6 @@ import {
   Heart,
   BarChart3, 
   Settings,
-  MapPin,
   ChevronLeft,
   ChevronRight,
   ShoppingBag,
@@ -50,20 +49,20 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
   const menuItems = allMenuItems.filter(item => !item.emiOnly || emiEnabled);
 
   return (
-    <div className={`bg-gray-900 text-white transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
+    <div className={`relative bloom bloom-quiet bg-ink-950 text-ivory transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
       {/* Logo */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <div className="flex items-center space-x-2">
-          <div className="relative">
-            <MapPin className="w-8 h-8 text-green-500" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
-          </div>
-          {isOpen && <span className="text-xl font-bold">SOHALAA</span>}
+      <div className={`flex border-b border-gold-500/25 ${isOpen ? 'items-center justify-between p-4' : 'flex-col items-center gap-3 py-4'}`}>
+        <div className="flex items-center">
+          {isOpen ? (
+            <img src="/brand/logo-light.webp" alt="Sohalaa" width={720} height={242} className="h-12 w-auto" />
+          ) : (
+            <img src="/brand/icon-48.png" alt="Sohalaa" width={40} height={40} className="w-10 h-10 rounded-lg flex-shrink-0" />
+          )}
         </div>
         <button 
           onClick={onToggle}
           aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          className="p-1 hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors"
         >
           {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
@@ -72,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
       {/* Admin Badge */}
       {isOpen && (
         <div className="px-4 py-2">
-          <span className="bg-green-600 text-xs font-medium px-2 py-1 rounded">ADMIN PANEL</span>
+          <span className="ring-1 ring-gold-500/50 text-gold-300 text-xs tracking-[0.18em] px-2 py-1 rounded">ADMIN PANEL</span>
         </div>
       )}
 
@@ -90,8 +89,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpen, onTo
               aria-current={isActive ? 'page' : undefined}
               className={`w-full flex items-center px-4 py-3 text-left transition-colors ${
                 isActive 
-                  ? 'bg-green-600 text-white' 
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-white/10 text-gold-300' 
+                  : 'text-ink-100 hover:bg-white/5 hover:text-white'
               }`}
             >
               <Icon className="w-5 h-5" />
